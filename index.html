@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StreamDay">
+<title>StreamDay</title>
+<style>
+  :root {
+    --bg:#000;--surface:#0f0f0f;--s2:#1c1c1e;--s3:#2c2c2e;
+    --border:rgba(255,255,255,.08);--text:#fff;
+    --t2:rgba(255,255,255,.6);--t3:rgba(255,255,255,.3);
+    --r:14px;
+    --font:-apple-system,"SF Pro Display",BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100dvh}
+
+  .sb{height:env(safe-area-inset-top,44px);background:rgba(0,0,0,.9);position:fixed;top:0;left:0;right:0;z-index:100}
+
+  .nav{position:fixed;top:env(safe-area-inset-top,44px);left:0;right:0;z-index:99;height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:rgba(0,0,0,.82);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border-bottom:.5px solid var(--border)}
+  .logo{font-size:19px;font-weight:700;letter-spacing:-.6px}
+  .logo span{color:var(--t2);font-weight:300}
+  .pills{display:flex;gap:6px}
+  .pill{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:500;border:.5px solid var(--border);background:var(--s2);color:var(--t2);cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent}
+  .pill.active{background:#fff;color:#000;border-color:#fff}
+
+  /* Service chip row */
+  .svc-bar{position:sticky;top:calc(env(safe-area-inset-top,44px) + 54px);z-index:98;display:flex;gap:8px;padding:10px 20px 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:rgba(0,0,0,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:.5px solid var(--border)}
+  .svc-bar::-webkit-scrollbar{display:none}
+  .svc-chip{flex:0 0 auto;display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;border:.5px solid var(--border);background:var(--s2);color:var(--t2);cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap;transition:all .2s}
+  .svc-chip.active{color:#fff;border-color:rgba(255,255,255,.35);background:var(--s3)}
+  .chip-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+
+  .main{padding-top:calc(env(safe-area-inset-top,44px) + 54px + 52px + 10px);padding-bottom:calc(env(safe-area-inset-bottom,20px) + 30px)}
+
+  /* Loading screen */
+  .loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px}
+  .spinner{width:36px;height:36px;border:2.5px solid var(--s3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-text{font-size:14px;color:var(--t3);letter-spacing:.3px}
+
+  .day-section{margin-bottom:28px;animation:fadeUp .4s ease both}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+  .day-header{padding:0 20px 4px;display:flex;align-items:center;gap:8px}
+  .day-name{font-size:22px;font-weight:700;letter-spacing:-.5px}
+  .today-chip{font-size:11px;font-weight:600;color:#000;background:#fff;border-radius:6px;padding:2px 8px}
+  .day-sub{padding:0 20px 14px;font-size:13px;color:var(--t3)}
+  .cat-row{padding:2px 20px 10px;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--t3)}
+  .divider{height:.5px;background:var(--border);margin:0 20px 24px}
+
+  .scroll-track{display:flex;gap:12px;padding:0 20px 6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .scroll-track::-webkit-scrollbar{display:none}
+
+  .card{flex:0 0 auto;width:124px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .18s}
+  .card:active{transform:scale(.95)}
+  .card-poster{width:124px;height:184px;border-radius:var(--r);overflow:hidden;position:relative;background:var(--s2);margin-bottom:8px;box-shadow:0 4px 16px rgba(0,0,0,.55)}
+  .card-poster img{width:100%;height:100%;object-fit:cover;display:block}
+  .fallback{width:100%;height:100%;display:flex;align-items:flex-end;padding:10px;background:linear-gradient(145deg,#1a1a2e,#16213e)}
+  .fallback span{font-size:11px;font-weight:700;color:rgba(255,255,255,.9);line-height:1.3}
+  .badge{position:absolute;top:7px;right:7px;border-radius:6px;padding:3px 7px;font-size:9px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;border:.5px solid rgba(255,255,255,.15);white-space:nowrap}
+  .new-label{position:absolute;top:7px;left:7px;background:#FF375F;color:#fff;font-size:9px;font-weight:700;padding:2px 6px;border-radius:5px;text-transform:uppercase}
+  .card-title{font-size:12px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-meta{font-size:11px;color:var(--t3);margin-top:2px}
+  .day-empty{padding:4px 20px 14px;font-size:13px;color:var(--t3)}
+
+  /* Modal */
+  .overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);opacity:0;pointer-events:none;transition:opacity .28s;display:flex;align-items:flex-end}
+  .overlay.open{opacity:1;pointer-events:all}
+  .sheet{width:100%;background:var(--surface);border-radius:22px 22px 0 0;padding:10px 0 calc(env(safe-area-inset-bottom,20px) + 20px);transform:translateY(100%);transition:transform .38s cubic-bezier(.32,.72,0,1);max-height:85dvh;overflow-y:auto}
+  .overlay.open .sheet{transform:translateY(0)}
+  .handle{width:36px;height:4px;background:rgba(255,255,255,.18);border-radius:2px;margin:0 auto 18px}
+  .si{padding:0 20px;display:flex;gap:16px}
+  .sp{width:104px;height:152px;border-radius:12px;overflow:hidden;flex:0 0 auto;box-shadow:0 8px 28px rgba(0,0,0,.65);background:var(--s2)}
+  .sp img{width:100%;height:100%;object-fit:cover;display:block}
+  .sinf{flex:1;min-width:0}
+  .ssvc{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px}
+  .stitle{font-size:18px;font-weight:700;letter-spacing:-.3px;line-height:1.2;margin-bottom:4px}
+  .smeta{font-size:12px;color:var(--t3);margin-bottom:10px}
+  .stags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+  .stag{font-size:11px;font-weight:500;padding:3px 9px;border-radius:7px;background:var(--s3);color:var(--t2)}
+  .srating{font-size:12px;color:var(--t3)}
+  .sdesc{padding:16px 20px 0;font-size:13px;color:var(--t2);line-height:1.65}
+  .watch-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:calc(100% - 40px);margin:18px 20px 0;height:50px;border-radius:14px;background:#fff;color:#000;font-size:15px;font-weight:600;border:none;cursor:pointer;text-decoration:none;-webkit-tap-highlight-color:transparent;transition:opacity .2s}
+  .watch-btn:active{opacity:.72}
+</style>
+</head>
+<body>
+<div class="sb"></div>
+<nav class="nav">
+  <div class="logo">Stream<span>Day</span></div>
+  <div class="pills">
+    <div class="pill active" data-f="all"   onclick="setTypeFilter(this)">All</div>
+    <div class="pill"        data-f="movie" onclick="setTypeFilter(this)">Movies</div>
+    <div class="pill"        data-f="tv"    onclick="setTypeFilter(this)">Series</div>
+  </div>
+</nav>
+
+<!-- Service filter bar (populated after load) -->
+<div class="svc-bar" id="svcBar">
+  <div class="svc-chip active" data-id="all" onclick="setSvc(this)">All Services</div>
+</div>
+
+<main class="main" id="main">
+  <div class="loading-screen">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading streaming releases…</div>
+  </div>
+</main>
+
+<div class="overlay" id="overlay" onclick="closeIfBg(event)">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="si" id="si"></div>
+    <div class="sdesc" id="sd"></div>
+    <a class="watch-btn" id="wb" href="#" target="_blank">▶&nbsp;&nbsp;Watch Now</a>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIG
+// ─────────────────────────────────────────────
+const RAPID_KEY  = "e7b1edc1bemshdb4b413733b19f1p15a041jsn73ca4e296576";
+const RAPID_HOST = "streaming-availability.p.rapidapi.com";
+
+const TMDB_BEARER= "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJiZWI4MDVlODg2MmYyODhkOTQ1NDhmOTU1NGYyZjc2YiIsIm5iZiI6MTY3OTQ3MzE2Ni43NzMsInN1YiI6IjY0MWFiYTBlZjlhYTQ3MDBiMTUxZGRmYSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.E73D999tD0DBX0aJVVfyooRa3T750C-Y_Hk1TZLr-EM";
+
+const BASE_TM = "https://api.themoviedb.org/3";
+const IMG  = "https://image.tmdb.org/t/p/w300";
+
+const SVCS = [
+  { id: "netflix", name: "Netflix", color: "#E50914", text: "#fff" },
+  { id: "prime", name: "Prime Video", color: "#00A8E0", text: "#fff" },
+  { id: "disney", name: "Disney+", color: "#113CCF", text: "#fff" },
+  { id: "apple", name: "Apple TV+", color: "#666", text: "#fff" },
+  { id: "hbo", name: "Max", color: "#5822B4", text: "#fff" },
+  { id: "paramount", name: "Paramount+", color: "#0064FF", text: "#fff" },
+  { id: "hulu", name: "Hulu", color: "#1CE783", text: "#000" },
+  { id: "videoland", name: "Videoland", color: "#E00000", text: "#fff" }
+];
+
+let allItems = [];
+let typeFilter = "all";
+let svcFilter = "all";
+const detailCache = {};
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function today() { return new Date().toISOString().slice(0,10); }
+
+function addDays(dateStr, n) {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0,10);
+}
+
+function formatDayName(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-GB",{weekday:"long"});
+}
+
+function formatFullDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
+}
+
+// ─────────────────────────────────────────────
+// TMDB
+// ─────────────────────────────────────────────
+async function tmdb(path) {
+  const r = await fetch(BASE_TM + path, {
+    headers: { Authorization: `Bearer ${TMDB_BEARER}` }
+  });
+  return r.json();
+}
+
+// ─────────────────────────────────────────────
+// RAPIDAPI FETCH
+// ─────────────────────────────────────────────
+async function fetchService(serviceId) {
+  const from = addDays(today(), -14);
+
+  const url = `https://${RAPID_HOST}/search/basic?country=nl&service=${serviceId}&output_language=en`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      "X-RapidAPI-Key": RAPID_KEY,
+      "X-RapidAPI-Host": RAPID_HOST
+    }
+  });
+
+  const data = await res.json();
+
+  const items = [];
+
+  for (const item of data.results || []) {
+    const firstSeen = item.firstSeen?.split("T")[0];
+    if (!firstSeen) continue;
+    if (firstSeen < from) continue;
+
+    items.push({
+      id: item.tmdbId,
+      _type: item.type === "movie" ? "movie" : "tv",
+      _date: firstSeen,
+      _svc: SVCS.find(s=>s.id===serviceId)
+    });
+  }
+
+  return items;
+}
+
+// ─────────────────────────────────────────────
+// FETCH ALL
+// ─────────────────────────────────────────────
+async function fetchAll() {
+  let results = [];
+
+  for (const svc of SVCS) {
+    const r = await fetchService(svc.id);
+    results = results.concat(r);
+  }
+
+  // dedupe per service
+  const seen = new Set();
+  return results.filter(item=>{
+    const key = item.id + item._svc.id;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// ─────────────────────────────────────────────
+// GROUP
+// ─────────────────────────────────────────────
+function groupByDate(items) {
+  const map = {};
+  items.forEach(i=>{
+    if (!map[i._date]) map[i._date] = {movies:[],tv:[]};
+    if (i._type==="movie") map[i._date].movies.push(i);
+    else map[i._date].tv.push(i);
+  });
+  return map;
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function applyFilters(items) {
+  return items.filter(i=>{
+    if (typeFilter==="movie" && i._type!=="movie") return false;
+    if (typeFilter==="tv" && i._type!=="tv") return false;
+    if (svcFilter!=="all" && i._svc.id!==svcFilter) return false;
+    return true;
+  });
+}
+
+async function makeCard(item) {
+  const d = await tmdb(`/${item._type}/${item.id}`);
+  const title = d.title || d.name || "—";
+  const poster = d.poster_path
+    ? `<img src="${IMG}${d.poster_path}">`
+    : `<div class="fallback"><span>${title}</span></div>`;
+
+  return `
+  <div class="card" onclick="openModal(${item.id},'${item._type}')">
+    <div class="card-poster">
+      ${poster}
+      <div class="badge" style="background:${item._svc.color};color:${item._svc.text}">
+        ${item._svc.name}
+      </div>
+    </div>
+    <div class="card-title">${title}</div>
+  </div>`;
+}
+
+async function renderAll() {
+  const main = document.getElementById("main");
+  main.innerHTML = "";
+
+  const filtered = applyFilters(allItems);
+  const grouped = groupByDate(filtered);
+  const days = Object.keys(grouped).sort().reverse();
+
+  for (const date of days) {
+    const section = document.createElement("section");
+    section.className="day-section";
+
+    let html = `
+      <div class="day-header">
+        <div class="day-name">${formatDayName(date)}</div>
+      </div>
+      <div class="day-sub">${formatFullDate(date)}</div>
+    `;
+
+    if (grouped[date].movies.length) {
+      html += `<div class="cat-row">🎬 Movies</div><div class="scroll-track">`;
+      for (const m of grouped[date].movies) {
+        html += await makeCard(m);
+      }
+      html += "</div>";
+    }
+
+    if (grouped[date].tv.length) {
+      html += `<div class="cat-row">📺 TV Series</div><div class="scroll-track">`;
+      for (const t of grouped[date].tv) {
+        html += await makeCard(t);
+      }
+      html += "</div>";
+    }
+
+    section.innerHTML = html;
+    main.appendChild(section);
+  }
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+async function init() {
+  allItems = await fetchAll();
+  renderAll();
+}
+
+init();
+</script>
+</body>
+</html>
