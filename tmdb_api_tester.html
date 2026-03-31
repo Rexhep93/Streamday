@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0c0e12;
+    --surface: #13161c;
+    --border: #1e2330;
+    --accent: #3d8ef8;
+    --accent2: #22d3a0;
+    --warn: #f59e0b;
+    --err: #f87171;
+    --t1: #e8eaf0;
+    --t2: #8892a4;
+    --t3: #4a5568;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--t1);
+    font-family: var(--sans);
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+    color: var(--t1);
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--t2);
+    margin-bottom: 16px;
+    font-family: var(--mono);
+  }
+
+  .token-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+
+  .token-input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: var(--t1);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .token-input:focus { border-color: var(--accent); }
+  .token-input::placeholder { color: var(--t3); }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+  .btn.secondary {
+    background: var(--surface);
+    color: var(--t2);
+    border: 1px solid var(--border);
+  }
+  .btn.secondary:hover { border-color: var(--t3); color: var(--t1); }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    padding: 8px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--t3);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .tab:hover { color: var(--t2); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .endpoint-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+
+  .endpoint-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+
+  .endpoint-header:hover { background: rgba(255,255,255,0.02); }
+
+  .method-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(61,142,248,0.15);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .endpoint-path {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--t1);
+    flex: 1;
+  }
+
+  .endpoint-desc {
+    font-size: 10px;
+    color: var(--t2);
+    flex-shrink: 0;
+  }
+
+  .run-btn {
+    background: rgba(61,142,248,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(61,142,248,0.25);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+
+  .run-btn:hover { background: rgba(61,142,248,0.25); }
+  .run-btn.loading { opacity: 0.5; cursor: default; }
+
+  .endpoint-body { display: none; border-top: 1px solid var(--border); }
+  .endpoint-body.open { display: block; }
+
+  .params-section {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .param-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .param-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t2);
+  }
+
+  .param-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: var(--t1);
+    font-family: var(--mono);
+    font-size: 10px;
+    width: 120px;
+    outline: none;
+  }
+
+  .param-input:focus { border-color: var(--accent); }
+
+  .result-area {
+    padding: 12px 14px;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .result-area::-webkit-scrollbar { width: 4px; }
+  .result-area::-webkit-scrollbar-track { background: transparent; }
+  .result-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .result-empty {
+    color: var(--t3);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: center;
+    padding: 20px;
+  }
+
+  .result-error {
+    color: var(--err);
+    font-family: var(--mono);
+    font-size: 11px;
+    background: rgba(248,113,113,0.08);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 6px;
+    padding: 10px;
+  }
+
+  .result-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--t2);
+  }
+
+  .stat-val { color: var(--accent2); font-weight: 700; }
+
+  .item-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 8px;
+  }
+
+  .item-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 10px;
+  }
+
+  .item-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+    background: var(--border);
+    display: block;
+  }
+
+  .item-poster-placeholder {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background: var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--t3);
+    font-size: 18px;
+  }
+
+  .item-info {
+    padding: 6px 7px;
+  }
+
+  .item-title {
+    font-weight: 700;
+    font-size: 9px;
+    color: var(--t1);
+    line-height: 1.3;
+    margin-bottom: 3px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .item-date {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--accent2);
+  }
+
+  .item-provider {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: var(--warn);
+    margin-top: 2px;
+  }
+
+  .provider-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .provider-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    background: var(--bg);
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+
+  .provider-logo {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .provider-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--t1);
+    flex: 1;
+  }
+
+  .provider-id {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t3);
+  }
+
+  .json-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t2);
+    cursor: pointer;
+    margin-top: 8px;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg);
+    transition: all 0.1s;
+  }
+
+  .json-toggle:hover { border-color: var(--t3); color: var(--t1); }
+
+  .raw-json {
+    display: none;
+    margin-top: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t2);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .raw-json.open { display: block; }
+
+  .insight-box {
+    background: rgba(34,211,160,0.06);
+    border: 1px solid rgba(34,211,160,0.2);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .insight-box .insight-title {
+    font-weight: 800;
+    color: var(--accent2);
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+
+  .insight-box ul { padding-left: 16px; color: var(--t2); }
+  .insight-box li { margin-bottom: 3px; }
+  .insight-box strong { color: var(--t1); }
+
+  .diff-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .diff-col {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .diff-col-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .diff-col.yours .diff-col-title { color: var(--err); }
+  .diff-col.better .diff-col-title { color: var(--accent2); }
+
+  .diff-item {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--t2);
+    padding: 3px 0;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+
+  .diff-item:last-child { border-bottom: none; }
+
+  .tag {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 8px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+
+  .tag.err { background: rgba(248,113,113,0.15); color: var(--err); }
+  .tag.ok { background: rgba(34,211,160,0.15); color: var(--accent2); }
+
+  .loading-dots::after {
+    content: '...';
+    animation: dots 1s steps(3, end) infinite;
+  }
+
+  @keyframes dots {
+    0% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🔬 TMDB API Tester</h1>
+<div class="subtitle">Streamgids — diagnose & vergelijk endpoints</div>
+
+<div class="token-row">
+  <input class="token-input" id="tokenInput" type="password"
+    placeholder="Plak hier je TMDB Bearer Token (eyJ...)"
+    value="">
+  <button class="btn" id="loadTokenBtn" onclick="saveToken()">Opslaan</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('diagnose')">🩺 Diagnose</div>
+  <div class="tab" onclick="switchTab('endpoints')">📡 Endpoints testen</div>
+  <div class="tab" onclick="switchTab('compare')">⚖️ Vergelijking</div>
+</div>
+
+<!-- DIAGNOSE TAB -->
+<div id="tab-diagnose" class="panel active">
+  <div class="insight-box">
+    <div class="insight-title">⚠️ Gevonden problemen in jouw script</div>
+    <ul>
+      <li><strong>Je gebruikt <code>now_playing</code> & <code>on_the_air</code></strong> — dit zijn populariteitslijsten zonder exacte uitzenddatum per platform. Ze geven je <em>welke films/series beschikbaar zijn</em>, niet <em>wanneer</em> ze nieuw verschijnen op een streamer.</li>
+      <li><strong>Geen <code>primary_release_date</code> filter</strong> — je filtert niet op de datum dat iets op een platform verschijnt, alleen op of het er staat.</li>
+      <li><strong>Max 15 items per provider</strong> — je pakt alleen de eerste 15 resultaten van <code>on_the_air</code>, terwijl FilmVandaag vermoedelijk <code>discover</code> gebruikt met <code>with_release_type=4</code> (streaming) per datum.</li>
+      <li><strong>Geen <code>release_dates</code> endpoint</strong> — voor films is er een apart endpoint dat precies aangeeft wanneer een film op een NL platform verschijnt.</li>
+    </ul>
+  </div>
+
+  <div class="diff-section">
+    <div class="diff-col yours">
+      <div class="diff-col-title">❌ WAT JIJ DOET</div>
+      <div class="diff-item"><span class="tag err">endpoint</span> /movie/now_playing</div>
+      <div class="diff-item"><span class="tag err">endpoint</span> /tv/on_the_air</div>
+      <div class="diff-item"><span class="tag err">probleem</span> Datum = release_date van de film, niet de streaming-datum</div>
+      <div class="diff-item"><span class="tag err">probleem</span> Slecht begrensde dataset (max 15 items)</div>
+      <div class="diff-item"><span class="tag err">probleem</span> Geen filter op wanneer iets nieuw is op een platform</div>
+    </div>
+    <div class="diff-col better">
+      <div class="diff-col-title">✅ WAT BETER WERKT</div>
+      <div class="diff-item"><span class="tag ok">endpoint</span> /discover/movie met release_type=4</div>
+      <div class="diff-item"><span class="tag ok">endpoint</span> /discover/tv met air_date filters</div>
+      <div class="diff-item"><span class="tag ok">fix</span> Filter op primary_release_date.gte/lte</div>
+      <div class="diff-item"><span class="tag ok">fix</span> Filter op with_watch_providers per provider_id</div>
+      <div class="diff-item"><span class="tag ok">fix</span> /movie/{id}/release_dates voor exacte NL streamingdatum</div>
+    </div>
+  </div>
+
+  <button class="btn" onclick="switchTab('endpoints')">→ Test de betere endpoints</button>
+</div>
+
+<!-- ENDPOINTS TAB -->
+<div id="tab-endpoints" class="panel">
+
+  <!-- Endpoint 1: jouw huidige aanpak -->
+  <div class="endpoint-card">
+    <div class="endpoint-header" onclick="toggleBody('ep1')">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-path">/movie/now_playing <span style="color:var(--t3)">+ /watch/providers</span></span>
+      <span class="endpoint-desc">Jouw huidige aanpak</span>
+      <button class="run-btn" id="run-ep1" onclick="event.stopPropagation(); runEndpoint('ep1')">▶ Run</button>
+    </div>
+    <div class="endpoint-body" id="body-ep1">
+      <div class="params-section">
+        <div class="param-group"><span class="param-label">region:</span><input class="param-input" id="p-ep1-region" value="NL"></div>
+        <div class="param-group"><span class="param-label">language:</span><input class="param-input" id="p-ep1-lang" value="nl-NL"></div>
+      </div>
+      <div class="result-area" id="result-ep1"><div class="result-empty">Druk op ▶ Run om te testen</div></div>
+    </div>
+  </div>
+
+  <!-- Endpoint 2: discover met release_type streaming -->
+  <div class="endpoint-card">
+    <div class="endpoint-header" onclick="toggleBody('ep2')">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-path">/discover/movie <span style="color:var(--accent2)">with_release_type=4</span></span>
+      <span class="endpoint-desc">Nieuw op streaming — betere aanpak</span>
+      <button class="run-btn" id="run-ep2" onclick="event.stopPropagation(); runEndpoint('ep2')">▶ Run</button>
+    </div>
+    <div class="endpoint-body" id="body-ep2">
+      <div class="params-section">
+        <div class="param-group"><span class="param-label">datum van:</span><input class="param-input" id="p-ep2-from" value="" placeholder="YYYY-MM-DD"></div>
+        <div class="param-group"><span class="param-label">datum tot:</span><input class="param-input" id="p-ep2-to" value="" placeholder="YYYY-MM-DD"></div>
+        <div class="param-group"><span class="param-label">provider_id:</span><input class="param-input" id="p-ep2-prov" value="8" placeholder="8=Netflix, 119=Prime"></div>
+      </div>
+      <div class="result-area" id="result-ep2"><div class="result-empty">Druk op ▶ Run om te testen</div></div>
+    </div>
+  </div>
+
+  <!-- Endpoint 3: discover tv met air_date -->
+  <div class="endpoint-card">
+    <div class="endpoint-header" onclick="toggleBody('ep3')">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-path">/discover/tv <span style="color:var(--accent2)">air_date filters</span></span>
+      <span class="endpoint-desc">Nieuwe series per datum</span>
+      <button class="run-btn" id="run-ep3" onclick="event.stopPropagation(); runEndpoint('ep3')">▶ Run</button>
+    </div>
+    <div class="endpoint-body" id="body-ep3">
+      <div class="params-section">
+        <div class="param-group"><span class="param-label">air_date van:</span><input class="param-input" id="p-ep3-from" value="" placeholder="YYYY-MM-DD"></div>
+        <div class="param-group"><span class="param-label">air_date tot:</span><input class="param-input" id="p-ep3-to" value="" placeholder="YYYY-MM-DD"></div>
+        <div class="param-group"><span class="param-label">provider_id:</span><input class="param-input" id="p-ep3-prov" value="8"></div>
+      </div>
+      <div class="result-area" id="result-ep3"><div class="result-empty">Druk op ▶ Run om te testen</div></div>
+    </div>
+  </div>
+
+  <!-- Endpoint 4: NL providers ophalen -->
+  <div class="endpoint-card">
+    <div class="endpoint-header" onclick="toggleBody('ep4')">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-path">/watch/providers/movie <span style="color:var(--t2)">NL providers lijst</span></span>
+      <span class="endpoint-desc">Welke provider IDs zijn er?</span>
+      <button class="run-btn" id="run-ep4" onclick="event.stopPropagation(); runEndpoint('ep4')">▶ Run</button>
+    </div>
+    <div class="endpoint-body" id="body-ep4">
+      <div class="result-area" id="result-ep4"><div class="result-empty">Druk op ▶ Run om te testen</div></div>
+    </div>
+  </div>
+
+  <!-- Endpoint 5: release_dates voor een specifieke film -->
+  <div class="endpoint-card">
+    <div class="endpoint-header" onclick="toggleBody('ep5')">
+      <span class="method-badge">GET</span>
+      <span class="endpoint-path">/movie/{id}/release_dates <span style="color:var(--t2)">exacte NL datum</span></span>
+      <span class="endpoint-desc">Wanneer verschijnt een film exact op streaming?</span>
+      <button class="run-btn" id="run-ep5" onclick="event.stopPropagation(); runEndpoint('ep5')">▶ Run</button>
+    </div>
+    <div class="endpoint-body" id="body-ep5">
+      <div class="params-section">
+        <div class="param-group"><span class="param-label">movie_id:</span><input class="param-input" id="p-ep5-id" value="1084736" placeholder="bijv. 1084736"></div>
+      </div>
+      <div class="result-area" id="result-ep5"><div class="result-empty">Druk op ▶ Run om te testen</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- COMPARE TAB -->
+<div id="tab-compare" class="panel">
+  <div class="insight-box">
+    <div class="insight-title">📋 Aanbevolen implementatie voor Streamgids</div>
+    <ul>
+      <li>Gebruik <strong>/discover/movie</strong> met <code>with_release_type=4</code> (digitale streaming) en <code>primary_release_date.gte/lte</code> om films te vinden die in een datumvenster nieuw op streaming zijn.</li>
+      <li>Gebruik <strong>/discover/tv</strong> met <code>air_date.gte/lte</code> en <code>with_watch_providers</code> voor series-afleveringen.</li>
+      <li>Loop door alle NL provider IDs (8=Netflix, 119=Prime, 337=Disney+, etc.) en doe per provider een discover-call — dan weet je exact welke titels per platform beschikbaar zijn voor welke datum.</li>
+      <li>Gebruik <strong>/movie/{id}/release_dates</strong> voor de exacte NL streaming-datum van individuele films (type 4 = digital).</li>
+      <li>Gebruik <strong>/tv/{id}/season/{n}/episode/{n}</strong> voor de exacte air_date van een aflevering in NL.</li>
+    </ul>
+  </div>
+
+  <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px; font-family: var(--mono); font-size: 10px; line-height: 1.8; color: var(--t2);">
+    <div style="color: var(--accent); font-weight: 700; margin-bottom: 8px; font-size: 11px;">// Betere aanpak voor fetchTMDBReleases()</div>
+    <div style="color: var(--t3)">// Stap 1: haal provider IDs op</div>
+    <div>tmdb(<span style="color:#86efac">'/watch/providers/movie'</span>, {watch_region:<span style="color:#86efac">'NL'</span>})</div>
+    <br>
+    <div style="color: var(--t3)">// Stap 2: per provider, discover films die nieuw zijn</div>
+    <div>tmdb(<span style="color:#86efac">'/discover/movie'</span>, {</div>
+    <div>&nbsp;&nbsp;with_watch_providers: <span style="color:#86efac">'8'</span>, <span style="color: var(--t3)">// Netflix</span></div>
+    <div>&nbsp;&nbsp;watch_region: <span style="color:#86efac">'NL'</span>,</div>
+    <div>&nbsp;&nbsp;with_release_type: <span style="color:#fbbf24">'4'</span>, <span style="color: var(--t3)">// 4 = digitaal/streaming</span></div>
+    <div>&nbsp;&nbsp;<span style="color:#c4b5fd">'primary_release_date.gte'</span>: <span style="color:#86efac">'2025-03-01'</span>,</div>
+    <div>&nbsp;&nbsp;<span style="color:#c4b5fd">'primary_release_date.lte'</span>: <span style="color:#86efac">'2025-04-15'</span>,</div>
+    <div>&nbsp;&nbsp;sort_by: <span style="color:#86efac">'primary_release_date.desc'</span>,</div>
+    <div>&nbsp;&nbsp;language: <span style="color:#86efac">'nl-NL'</span></div>
+    <div>})</div>
+    <br>
+    <div style="color: var(--t3)">// Stap 3: voor TV, gebruik air_date filters</div>
+    <div>tmdb(<span style="color:#86efac">'/discover/tv'</span>, {</div>
+    <div>&nbsp;&nbsp;with_watch_providers: <span style="color:#86efac">'8'</span>,</div>
+    <div>&nbsp;&nbsp;watch_region: <span style="color:#86efac">'NL'</span>,</div>
+    <div>&nbsp;&nbsp;<span style="color:#c4b5fd">'air_date.gte'</span>: <span style="color:#86efac">'2025-03-01'</span>,</div>
+    <div>&nbsp;&nbsp;<span style="color:#c4b5fd">'air_date.lte'</span>: <span style="color:#86efac">'2025-04-15'</span>,</div>
+    <div>&nbsp;&nbsp;sort_by: <span style="color:#86efac">'first_air_date.desc'</span>,</div>
+    <div>&nbsp;&nbsp;language: <span style="color:#86efac">'nl-NL'</span></div>
+    <div>})</div>
+  </div>
+</div>
+
+<script>
+let TOKEN = '';
+
+// Set default dates
+(function() {
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  const minus7 = new Date(today); minus7.setDate(today.getDate() - 7);
+  const plus14 = new Date(today); plus14.setDate(today.getDate() + 14);
+
+  document.getElementById('p-ep2-from').value = fmt(minus7);
+  document.getElementById('p-ep2-to').value = fmt(plus14);
+  document.getElementById('p-ep3-from').value = fmt(minus7);
+  document.getElementById('p-ep3-to').value = fmt(plus14);
+})();
+
+function saveToken() {
+  TOKEN = document.getElementById('tokenInput').value.trim();
+  if (!TOKEN) { alert('Vul een token in!'); return; }
+  document.getElementById('loadTokenBtn').textContent = '✓ Opgeslagen';
+  setTimeout(() => document.getElementById('loadTokenBtn').textContent = 'Opslaan', 2000);
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['diagnose','endpoints','compare'][i] === name);
+  });
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+function toggleBody(id) {
+  const body = document.getElementById('body-' + id);
+  body.classList.toggle('open');
+}
+
+function tmdbFetch(path, params) {
+  const url = new URL('https://api.themoviedb.org/3' + path);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+  return fetch(url.toString(), {
+    headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }
+  }).then(r => {
+    if (!r.ok) throw new Error('TMDB ' + r.status + ' — controleer je token');
+    return r.json();
+  });
+}
+
+function setLoading(id) {
+  document.getElementById('result-' + id).innerHTML = '<div class="result-empty loading-dots">Laden</div>';
+  const btn = document.getElementById('run-' + id);
+  if (btn) { btn.classList.add('loading'); btn.textContent = '⏳'; }
+}
+
+function doneLoading(id) {
+  const btn = document.getElementById('run-' + id);
+  if (btn) { btn.classList.remove('loading'); btn.textContent = '▶ Run'; }
+  document.getElementById('body-' + id).classList.add('open');
+}
+
+function showError(id, msg) {
+  document.getElementById('result-' + id).innerHTML = `<div class="result-error">❌ ${msg}</div>`;
+  doneLoading(id);
+}
+
+function renderItems(id, items, dateField, showProvider) {
+  const el = document.getElementById('result-' + id);
+  const stats = `<div class="result-stats"><span>Gevonden: <span class="stat-val">${items.length} items</span></span></div>`;
+  const grid = items.map(m => {
+    const title = m.title || m.name || '?';
+    const date = m[dateField] || m.release_date || m.first_air_date || '—';
+    const poster = m.poster_path ? `<img class="item-poster" src="https://image.tmdb.org/t/p/w200${m.poster_path}" loading="lazy">` : `<div class="item-poster-placeholder">🎬</div>`;
+    return `<div class="item-card">${poster}<div class="item-info"><div class="item-title">${title}</div><div class="item-date">${date}</div></div></div>`;
+  }).join('');
+
+  const jsonStr = JSON.stringify(items.slice(0, 3), null, 2);
+  el.innerHTML = stats + `<div class="item-grid">${grid}</div>
+    <div class="json-toggle" onclick="this.nextSibling.classList.toggle('open')">{ } Bekijk raw JSON (eerste 3)</div>
+    <pre class="raw-json">${escHtml(jsonStr)}</pre>`;
+  doneLoading(id);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function runEndpoint(id) {
+  if (!TOKEN) { alert('Sla eerst je TMDB token op!'); return; }
+  setLoading(id);
+
+  try {
+    if (id === 'ep1') {
+      const region = document.getElementById('p-ep1-region').value;
+      const lang = document.getElementById('p-ep1-lang').value;
+      const data = await tmdbFetch('/movie/now_playing', { region, language: lang, page: 1 });
+      const items = (data.results || []).slice(0, 20);
+      renderItems(id, items, 'release_date');
+
+    } else if (id === 'ep2') {
+      const from = document.getElementById('p-ep2-from').value;
+      const to = document.getElementById('p-ep2-to').value;
+      const prov = document.getElementById('p-ep2-prov').value;
+      const data = await tmdbFetch('/discover/movie', {
+        with_release_type: '4',
+        watch_region: 'NL',
+        with_watch_providers: prov,
+        'primary_release_date.gte': from,
+        'primary_release_date.lte': to,
+        sort_by: 'primary_release_date.desc',
+        language: 'nl-NL',
+        page: 1
+      });
+      renderItems(id, data.results || [], 'release_date');
+
+    } else if (id === 'ep3') {
+      const from = document.getElementById('p-ep3-from').value;
+      const to = document.getElementById('p-ep3-to').value;
+      const prov = document.getElementById('p-ep3-prov').value;
+      const data = await tmdbFetch('/discover/tv', {
+        with_watch_providers: prov,
+        watch_region: 'NL',
+        'air_date.gte': from,
+        'air_date.lte': to,
+        sort_by: 'first_air_date.desc',
+        language: 'nl-NL',
+        page: 1
+      });
+      renderItems(id, data.results || [], 'first_air_date');
+
+    } else if (id === 'ep4') {
+      const data = await tmdbFetch('/watch/providers/movie', { watch_region: 'NL', language: 'nl-NL' });
+      const el = document.getElementById('result-ep4');
+      const providers = (data.results || []).slice(0, 30);
+      const rows = providers.map(p => {
+        const logo = p.logo_path ? `<img class="provider-logo" src="https://image.tmdb.org/t/p/original${p.logo_path}" loading="lazy">` : '<div style="width:28px;height:28px;background:var(--border);border-radius:6px"></div>';
+        return `<div class="provider-row">${logo}<span class="provider-name">${p.provider_name}</span><span class="provider-id">ID: ${p.provider_id}</span></div>`;
+      }).join('');
+      el.innerHTML = `<div class="result-stats"><span>Providers: <span class="stat-val">${providers.length}</span></span></div><div class="provider-list">${rows}</div>`;
+      doneLoading(id);
+
+    } else if (id === 'ep5') {
+      const movieId = document.getElementById('p-ep5-id').value;
+      const data = await tmdbFetch(`/movie/${movieId}/release_dates`, {});
+      const nlEntry = (data.results || []).find(r => r.iso_3166_1 === 'NL');
+      const el = document.getElementById('result-ep5');
+      if (!nlEntry) {
+        el.innerHTML = '<div class="result-error">Geen NL release dates gevonden voor dit ID.</div>';
+      } else {
+        const releaseTypes = { 1:'Premiere', 2:'Theatraal beperkt', 3:'Theatraal', 4:'Digitaal/Streaming ⭐', 5:'Fysiek', 6:'TV' };
+        const rows = (nlEntry.release_dates || []).map(rd => {
+          const typeLabel = releaseTypes[rd.type] || `Type ${rd.type}`;
+          const date = (rd.release_date || '').split('T')[0];
+          const highlight = rd.type === 4 ? 'color: var(--accent2); font-weight: 700;' : '';
+          return `<div class="diff-item"><span style="${highlight}">${typeLabel}</span> — ${date}</div>`;
+        }).join('');
+        el.innerHTML = `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px">${rows}</div>
+          <div style="margin-top:8px;font-size:10px;color:var(--accent2)">⭐ Type 4 = digitaal/streaming — dit is de datum die je wilt gebruiken!</div>`;
+      }
+      doneLoading(id);
+    }
+  } catch(e) {
+    showError(id, e.message);
+  }
+}
+</script>
+</body>
+</html>
